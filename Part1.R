@@ -88,7 +88,7 @@ partition_ds <- function(data_s, fraction = 0.6)
 
 compute_LDA <- function(data_s)
 {
-  data_s <- transform_auto_ds();
+  data_s = transform_auto_ds();
   #--- partition
   set.seed(123)
   #shuffle the data
@@ -112,6 +112,31 @@ compute_LDA <- function(data_s)
   #ggplot(lda.data, geom_point(aes(color = HL_mpg)));
 }
 
+compute_QDA <- function(data_s)
+{
+  data_s = transform_auto_ds();
+  #--- partition
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
+  #--- end partition
+  
+  model.qda <- qda(formula = HL_mpg ~ .,  data = training);
+  predictions <- predict(model.qda, newdata=testing);
+  sucess_rate = mean(predictions$class==testing$HL_mpg) * 100;
+  print(sucess_rate);
+  plot(predictions$posterior[,2], predictions$class, col=testing$HL_mpg+10)
+  
+  #new_data <- data.frame(type = data_s['HL_mpg'], lda = predictions$x);
+  #ggplot(new_data) + geom_point(aes(lda.LD1,lda.LD1, colour = type), size = 2.5);
+  #plot(model);
+  #plot(predictions);
+  #lda.data <- cbind(training, predict(model)$x);
+  #ggplot(lda.data, geom_point(aes(color = HL_mpg))); 
+}
 
 
 test_diff_methods <- function()
