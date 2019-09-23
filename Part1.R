@@ -3,10 +3,8 @@ rm(list = ls())
 library(dplyr)
 library(caret)
 library(tidyverse)
+library(ggplot2)
 library(MASS)
-
-
-set.seed(123)
 
 load_auto_ds <- function()
 {
@@ -50,6 +48,7 @@ transform_auto_ds <- function(attribute_name = 'mpg')
     auto[e] <- NULL;
   }
   #--
+  
   auto <- scale_only_numeric(auto);
   return (auto);
 }
@@ -87,16 +86,33 @@ partition_ds <- function(data_s, fraction = 0.6)
   return (learning_set);
 }
 
-compute_LDA <- function(train, test)
+compute_LDA <- function(data_s)
 {
-  HL_mpg = train['HL_mpg'];
-  model <- lda(formula = HL_mpg ~ .,  data = train, prior = c(1,1)/2, method = "class");
-  plot(model);
+  data_s <- transform_auto_ds();
+  #--- partition
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.6;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
+  #--- end partition
+  
+  model.lda <- lda(formula = HL_mpg ~ .,  data = training);
+  predictions <- model.lda %>% predict(testing);
+  sucess_rate = mean(predictions$class==testing$HL_mpg) * 100;
+  print(sucess_rate);
+  
+  #new_data <- data.frame(type = data_s['HL_mpg'], lda = predictions$x);
+  #ggplot(new_data) + geom_point(aes(lda.LD1,lda.LD1, colour = type), size = 2.5);
+  #plot(model);
+  #plot(predictions);
+  #lda.data <- cbind(training, predict(model)$x);
+  #ggplot(lda.data, geom_point(aes(color = HL_mpg)));
 }
 
 test_diff_methods <- function()
 {
   auto <- transform_auto_ds();
-  learning_set <- partition_ds(auto);
-  compute_LDA(learning_set['train'], learning_set['test']);
+  compute_LDA(auto);
 }
