@@ -3,6 +3,7 @@ rm(list = ls())
 library(dplyr)
 library(caret)
 library(tidyverse)
+library(tidyr)
 library(ggplot2)
 library(MASS)
 library(FNN)
@@ -83,24 +84,28 @@ study_new_auto <- function()
   }
 }
 
-partition_ds <- function(data_s, fraction = 0.8)
+partition_ds <- function(data_s, fraction = 0.6)
 {
   set.seed(123)
    #shuffle the data
   ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
   training <- data_s[ind==1,];
   testing <- data_s[ind==2,];
-  learning_set <- list(training,testing);
+  learning_set <- list("train" = training, "test" = testing);
   return (learning_set);
 }
 
-compute_logisitic_regression <- function(data_s)
+
+compute_logisitic_regression <- function()
 {
-  
+  data_s = transform_auto_ds();
   #--- partition
-  learning_set = partition_ds(data_s);
-  training = learning_set[[1]];
-  testing = learning_set[[2]];
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
   #--- end partition
   
   model <- glm(HL_mpg ~.,family=binomial(link='logit'),data=training);
@@ -115,10 +120,14 @@ compute_logisitic_regression <- function(data_s)
 
 compute_LDA <- function(data_s)
 {
+  data_s = transform_auto_ds();
   #--- partition
-  learning_set = partition_ds(data_s);
-  training = learning_set[[1]];
-  testing = learning_set[[2]];
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
   #--- end partition
   
   model.lda <- lda(formula = HL_mpg ~ .,  data = training);
@@ -130,10 +139,14 @@ compute_LDA <- function(data_s)
 
 compute_QDA <- function(data_s)
 {
+  data_s = transform_auto_ds();
   #--- partition
-  learning_set = partition_ds(data_s);
-  training = learning_set[[1]];
-  testing = learning_set[[2]];
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
   #--- end partition
   
   model.qda <- qda(formula = HL_mpg ~ .,  data = training);
@@ -143,13 +156,17 @@ compute_QDA <- function(data_s)
   plot(predictions$posterior[,2], predictions$class, col=testing$HL_mpg+10)
 }
 
-compute_KNN2 <- function(data_s, K = 5)
+
+compute_KNN2 <- function(K)
 {
-  #--- partition
-  learning_set = partition_ds(data_s);
-  training = learning_set[[1]];
-  testing = learning_set[[2]];
-  #--- end partition
+  library(class)
+  
+  data_s = transform_auto_ds();
+  fraction = 0.8;
+  set.seed(3033);
+  intrain <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[intrain==1,];
+  testing <- data_s[intrain==2,];
   
   # get the range of x1 and x2
   rx1 <- range(training[1])
@@ -177,24 +194,17 @@ compute_KNN2 <- function(data_s, K = 5)
 test_diff_methods <- function()
 {
   auto <- transform_auto_ds();
-  compute_logisitic_regression(auto);
   compute_LDA(auto);
-<<<<<<< HEAD
-  compute_QDA(auto);
-  compute_KNN2(auto);
-  
-}
-=======
 }
 
 select <- dplyr::select 
 
 #computes test and training errors for each function splitting the data according to ratio
-compute_all_functions<-function(ratio)
+compute_all_functions<-function(ratio = 0.6, nbSeed = 123)
 {
   data_s = transform_auto_ds();
   #--- partition
-  set.seed(123)
+  set.seed(nbSeed);
   #shuffle the data
   fraction <- ratio;
   ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
@@ -240,6 +250,20 @@ compute_all_functions<-function(ratio)
   knn_error_tr=1-(accuracy(tab)/100)
   
   return(c(lda_error_tr,lda_error_tst,qda_error_tr,qda_error_tst,lr_error_tr,lr_error_tst,knn_error_tr,knn_error_tst))
+}
+
+
+benchmark <- function(nbSimulation = 500)
+{
+  error.df = data.frame(matrix(NA, nrow = nbSimulation, ncol = 8));
+  colnames(error.df) <- c('lda_error_tr','lda_error_tst','qda_error_tr','qda_error_tst','lr_error_tr','lr_error_tst','knn_error_tr','knn_error_tst');
+  for(i in 1:nbSimulation)
+  {
+    errors = compute_all_functions(nbSeed = i * 5);
+    error.df <- rbind(error.df,errors);
+  }
+  
+  boxplot(error.df);
 }
 
 #computes errors for different ratios
@@ -345,4 +369,3 @@ compute_knn_multiple_k<-function()
     geom_point(aes(x=k, y=error, color=type, shape=type)) +
     geom_line(aes(x=k, y=error, color=type, linetype=type))
 }
->>>>>>> afbdc43d2cad8c060a47aadec393ee1969b7952a
