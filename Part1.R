@@ -179,7 +179,170 @@ test_diff_methods <- function()
   auto <- transform_auto_ds();
   compute_logisitic_regression(auto);
   compute_LDA(auto);
+<<<<<<< HEAD
   compute_QDA(auto);
   compute_KNN2(auto);
   
 }
+=======
+}
+
+select <- dplyr::select 
+
+#computes test and training errors for each function splitting the data according to ratio
+compute_all_functions<-function(ratio)
+{
+  data_s = transform_auto_ds();
+  #--- partition
+  set.seed(123)
+  #shuffle the data
+  fraction <- ratio;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,]
+  
+  model.lda <- lda(formula = HL_mpg ~ .,  data = training);
+  model.qda <- qda(formula = HL_mpg ~ .,  data = training);
+  model.lr <- glm(HL_mpg ~.,family=binomial(link='logit'),data=training);
+  #fit the models
+  
+  #compute training and test error
+  predictions_test <- predict(model.lda, newdata=testing);
+  lda_error_tst = 1-mean(predictions_test$class==testing$HL_mpg);
+  predictions_train <- predict(model.lda, newdata=training);
+  lda_error_tr = 1-mean(predictions_train$class==training$HL_mpg);
+  
+  predictions_test <- predict(model.qda, newdata=testing);
+  qda_error_tst = 1-mean(predictions_test$class==testing$HL_mpg);
+  predictions_train <- predict(model.qda, newdata=training);
+  qda_error_tr = 1-mean(predictions_train$class==training$HL_mpg);
+  
+  fitted.results <- predict(model.lr,newdata=testing,type='response');
+  fitted.results <- ifelse(fitted.results > 0.5,1,0);
+  lr_error_tst <- mean(fitted.results != testing$HL_mpg);
+  
+  fitted.results <- predict(model.lr,newdata=training,type='response');
+  fitted.results <- ifelse(fitted.results > 0.5,1,0);
+  lr_error_tr <- mean(fitted.results != training$HL_mpg);
+  
+  #fit knn last since it requires some modification to data
+  training <- data_s[ind==1,-which(names(data_s)=="HL_mpg")];
+  testing <- data_s[ind==2,-which(names(data_s)=="HL_mpg")]
+  training_category <- data_s[ind==1,"HL_mpg"]
+  testing_category<-data_s[ind==2,"HL_mpg"]
+  
+  model.knn_test <- knn(train = training, test = testing, cl = training_category, k = 8)
+  model.knn_train <- knn(train = training, test = training, cl = training_category, k = 8)
+  
+  tab<-table(model.knn_test,testing_category)
+  knn_error_tst=1-(accuracy(tab)/100)
+  tab<-table(model.knn_train,training_category)
+  knn_error_tr=1-(accuracy(tab)/100)
+  
+  return(c(lda_error_tr,lda_error_tst,qda_error_tr,qda_error_tst,lr_error_tr,lr_error_tst,knn_error_tr,knn_error_tst))
+}
+
+#computes errors for different ratios
+compute_error_diff_ratios<-function()
+{
+  k_values <- c(seq(from=0.1, to=0.9, by=0.05))
+  #different rations to try
+  num_k <- length(k_values)
+  error_df <- tibble(k=rep(0, num_k),
+                     lda_error_tr=rep(0, num_k),
+                     lda_error_tst=rep(0, num_k),
+                     qda_error_tr=rep(0, num_k),
+                     qda_error_tst=rep(0, num_k),
+                     lr_error_tr=rep(0, num_k),
+                     lr_error_tst=rep(0, num_k),
+                     knn_error_tr=rep(0, num_k),
+                     knn_error_tst=rep(0, num_k))
+  #setup df which we deposit errors in 
+  
+  #compute errors for each k and put in error_df
+  for(i in 1:num_k){
+    # fix k for this loop iteration
+    k <- k_values[i]
+    
+    
+    # computes the train/test errors for knn
+    errors<-compute_all_functions(k)
+    
+    # store values in the data frame
+    error_df[i, 'k'] <- k
+    error_df[i, 'lda_error_tr'] <- errors[1]
+    error_df[i, 'lda_error_tst'] <- errors[2]
+    error_df[i, 'qda_error_tr'] <- errors[3]
+    error_df[i, 'qda_error_tst'] <- errors[4]
+    error_df[i, 'lr_error_tr'] <- errors[5]
+    error_df[i, 'lr_error_tst'] <- errors[6]
+    error_df[i, 'knn_error_tr'] <- errors[7]
+    error_df[i, 'knn_error_tst'] <- errors[8]
+  }
+  
+  #plot test errors against k for all functions
+  error_df %>% 
+    gather(key='type', value='error', lda_error_tst,qda_error_tst,lr_error_tst,knn_error_tst) %>% 
+    ggplot() +
+    geom_point(aes(x=k, y=error, color=type, shape=type)) +
+    geom_line(aes(x=k, y=error, color=type, linetype=type))
+}
+
+#computes errors for knn using a specified number of groups
+compute_knn<-function(K)
+{
+  data_s = transform_auto_ds();
+  #--- partition
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,-which(names(data_s)=="HL_mpg")];
+  testing <- data_s[ind==2,-which(names(data_s)=="HL_mpg")]
+  training_category <- data_s[ind==1,"HL_mpg"]
+  testing_category<-data_s[ind==2,"HL_mpg"]
+  
+  #compute test error
+  model.knn <- knn(train = training, test = testing, cl = training_category, k = K)
+  tab_test<-table(model.knn,testing_category)
+  test_error=1-(accuracy(tab_test)/100)
+  
+  #compute training error
+  model.knn <- knn(train = training, test = training, cl = training_category, k = K)
+  tab_training<-table(model.knn,training_category)
+  training_error=1-(accuracy(tab_training)/100)
+  
+  return(c(training_error,test_error))
+}
+
+#computes knn error for different Ks
+compute_knn_multiple_k<-function()
+{
+  k_values <- c(seq(from=1, to=200, by=4))
+  num_k <- length(k_values)
+  error_df <- tibble(k=rep(0, num_k),
+                     tr=rep(0, num_k),
+                     tst=rep(0, num_k))
+  
+  for(i in 1:num_k){
+    
+    # fix k for this loop iteration
+    k <- k_values[i]
+    
+    # compute the train/test errors for knn
+    errors<-compute_knn(k)
+    
+    # store values in the data frame
+    error_df[i, 'k'] <- k
+    error_df[i, 'training_error'] <- errors[1]
+    error_df[i, 'test_error'] <- errors[2]
+  }
+  
+  #plot training and test error
+  error_df %>% 
+    gather(key='type', value='error', training_error, test_error) %>% 
+    ggplot() +
+    geom_point(aes(x=k, y=error, color=type, shape=type)) +
+    geom_line(aes(x=k, y=error, color=type, linetype=type))
+}
+>>>>>>> afbdc43d2cad8c060a47aadec393ee1969b7952a
