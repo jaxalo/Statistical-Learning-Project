@@ -83,28 +83,24 @@ study_new_auto <- function()
   }
 }
 
-partition_ds <- function(data_s, fraction = 0.6)
+partition_ds <- function(data_s, fraction = 0.8)
 {
   set.seed(123)
    #shuffle the data
   ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
   training <- data_s[ind==1,];
   testing <- data_s[ind==2,];
-  learning_set <- list("train" = training, "test" = testing);
+  learning_set <- list(training,testing);
   return (learning_set);
 }
 
-
-compute_logisitic_regression <- function()
+compute_logisitic_regression <- function(data_s)
 {
-  data_s = transform_auto_ds();
+  
   #--- partition
-  set.seed(123)
-  #shuffle the data
-  fraction <- 0.8;
-  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
-  training <- data_s[ind==1,];
-  testing <- data_s[ind==2,];
+  learning_set = partition_ds(data_s);
+  training = learning_set[[1]];
+  testing = learning_set[[2]];
   #--- end partition
   
   model <- glm(HL_mpg ~.,family=binomial(link='logit'),data=training);
@@ -119,14 +115,10 @@ compute_logisitic_regression <- function()
 
 compute_LDA <- function(data_s)
 {
-  data_s = transform_auto_ds();
   #--- partition
-  set.seed(123)
-  #shuffle the data
-  fraction <- 0.8;
-  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
-  training <- data_s[ind==1,];
-  testing <- data_s[ind==2,];
+  learning_set = partition_ds(data_s);
+  training = learning_set[[1]];
+  testing = learning_set[[2]];
   #--- end partition
   
   model.lda <- lda(formula = HL_mpg ~ .,  data = training);
@@ -138,14 +130,10 @@ compute_LDA <- function(data_s)
 
 compute_QDA <- function(data_s)
 {
-  data_s = transform_auto_ds();
   #--- partition
-  set.seed(123)
-  #shuffle the data
-  fraction <- 0.8;
-  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
-  training <- data_s[ind==1,];
-  testing <- data_s[ind==2,];
+  learning_set = partition_ds(data_s);
+  training = learning_set[[1]];
+  testing = learning_set[[2]];
   #--- end partition
   
   model.qda <- qda(formula = HL_mpg ~ .,  data = training);
@@ -155,17 +143,13 @@ compute_QDA <- function(data_s)
   plot(predictions$posterior[,2], predictions$class, col=testing$HL_mpg+10)
 }
 
-
-compute_KNN2 <- function(K)
+compute_KNN2 <- function(data_s, K = 5)
 {
-  library(class)
-  
-  data_s = transform_auto_ds();
-  fraction = 0.8;
-  set.seed(3033);
-  intrain <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
-  training <- data_s[intrain==1,];
-  testing <- data_s[intrain==2,];
+  #--- partition
+  learning_set = partition_ds(data_s);
+  training = learning_set[[1]];
+  testing = learning_set[[2]];
+  #--- end partition
   
   # get the range of x1 and x2
   rx1 <- range(training[1])
@@ -193,5 +177,9 @@ compute_KNN2 <- function(K)
 test_diff_methods <- function()
 {
   auto <- transform_auto_ds();
+  compute_logisitic_regression(auto);
   compute_LDA(auto);
+  compute_QDA(auto);
+  compute_KNN2(auto);
+  
 }
