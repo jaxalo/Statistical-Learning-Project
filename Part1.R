@@ -94,6 +94,29 @@ partition_ds <- function(data_s, fraction = 0.6)
   return (learning_set);
 }
 
+
+compute_logisitic_regression <- function()
+{
+  data_s = transform_auto_ds();
+  #--- partition
+  set.seed(123)
+  #shuffle the data
+  fraction <- 0.8;
+  ind <- sample(2, nrow(data_s),replace=TRUE, prob = c(fraction,1.0 - fraction));
+  training <- data_s[ind==1,];
+  testing <- data_s[ind==2,];
+  #--- end partition
+  
+  model <- glm(HL_mpg ~.,family=binomial(link='logit'),data=training);
+  
+  
+  fitted.results <- predict(model,newdata=testing,type='response')
+  fitted.results <- ifelse(fitted.results > 0.5,1,0)
+  
+  misClasificError <- mean(fitted.results != testing$HL_mpg)
+  print(paste('Accuracy',1-misClasificError))
+}
+
 compute_LDA <- function(data_s)
 {
   data_s = transform_auto_ds();
@@ -166,7 +189,6 @@ compute_KNN2 <- function(K)
   points(xnew, pch=".", cex=1.2, col=ifelse(prob15>0.5, "coral", "cornflowerblue"))
   box()
 }
-
   
 test_diff_methods <- function()
 {
