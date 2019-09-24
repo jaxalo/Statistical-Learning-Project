@@ -273,8 +273,8 @@ compute_error_diff_ratios<-function()
     # fix k for this loop iteration
     k <- k_values[i]
     
-    # get_knn_error_rates() is from the knn_functions.R script
-    # it computes the train/test errors for knn
+    
+    # computes the train/test errors for knn
     errors<-compute_all_functions(k)
     
     # store values in the data frame
