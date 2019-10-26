@@ -81,98 +81,47 @@ transform_auto_ds <- function(attribute_name = 'mpg')
   return (auto);
 }
 
-build_unprunned_tree_all_ds <- function()
-{
-    auto_ds <- transform_auto_ds();
-    
-    # Create the input data frame.
-    input.dat <- auto_ds;
-    
-    # Give the chart file a name.
-    png(file = "decision_tree.png")
-    
-    # Create the tree.
-    output.tree <- ctree(
-      HL_mpg ~ cylinders + displacement + horsepower + weight + acceleration + year + origin + name , 
-      data = input.dat)
-    
-    # Plot the tree.
-    plot(output.tree)
-    
-    # Save the file.
-    dev.off()
-}
 
-build_perf_unprunned_tree_class <-function(nbSeed = 1, train, val)
+build_perf_unprunned_tree_class <-function(nbSeed = 1, training, test)
 {
+
+  model1 <- rpart(HL_mpg ~., data = training, method = "class");
   
+  predicted_test.classes <- model1 %>% predict(test, type = "class");
   
-  nrow(train);
+  test_error_rate = (1 - mean(predicted_test.classes == test$HL_mpg)) * 100 ;
   
-  # To view dataset
-  # edit(train)
+  predicted_train.classes <- model1 %>% predict(training, type = "class");
   
-  mtree <- rpart(HL_mpg~., data = train, method="class", control = rpart.control(minsplit = 20, minbucket = 7, maxdepth = 10, usesurrogate = 2, xval =10 ))
-  
-  val_test = predict(mtree, val, type = "prob");
-  
-  #Storing Model Performance Scores
-  pred_val_test <-prediction(val_test[,2],val$HL_mpg);
-  
-  # Calculating Area under Curve
-  perf_val_test <- performance(pred_val_test,"auc");
-  
-  test_error_rate = (1 - perf_val_test@y.values[[1]])*100;
-  
-  
-  #Same for training
-  val_training = predict(mtree, train, type = "prob");
-  
-  pred_val_training <-prediction(train[,2],train$HL_mpg);
-  
-  perf_val_training <- performance(pred_val_training,"auc")
-  
-  training_error_rate = (1 - perf_val_training@y.values[[1]])*100;
+  training_error_rate =  (1 - mean(predicted_train.classes == test$HL_mpg)) * 100;
   
   return (c(training_error_rate, test_error_rate));
 }
 
-build_perf_prunned_tree_class <-function(nbSeed = 1, train, val)
+build_perf_prunned_tree_class <-function(nbSeed = 1, training, test)
 {
+  train = caret::train;
   
-  mtree <- rpart(HL_mpg~., data = train, method="class", control = rpart.control(minsplit = 20, minbucket = 7, maxdepth = 10, usesurrogate = 2, xval =10 ))
+  model2 <- train(
+    HL_mpg ~., data = training, method = "rpart",
+    trControl = trainControl("cv", number = 10),
+    tuneLength = 30
+  );
   
-  bestcp <- mtree$cptable[which.min(mtree$cptable[,"xerror"]),"CP"];
+  predicted_test.classes <- model2 %>% predict(test);
   
-  # Prune the tree using the best cp.
-  pruned <- prune(mtree, cp = bestcp);
+  test_error_rate = (1 - (mean(predicted_test.classes == test$HL_mpg)))*100;
   
-  mtree <- rpart(HL_mpg~., data = train, method="class", control = rpart.control(minsplit = 20, minbucket = 7, maxdepth = 10, usesurrogate = 2, xval =10 ))
+  plot(model2);
   
-  val_test = predict(pruned, val, type = "prob");
+  predicted_train.classes <- model2 %>% predict(training);
   
-  #Storing Model Performance Scores
-  pred_val_test <-prediction(val_test[,2],val$HL_mpg);
-  
-  # Calculating Area under Curve
-  perf_val_test <- performance(pred_val_test,"auc");
-  
-  test_error_rate = (1 - perf_val_test@y.values[[1]])*100;
-  
-  
-  #Same for training
-  val_training = predict(pruned, train, type = "prob");
-  
-  pred_val_training <-prediction(train[,2],train$HL_mpg);
-  
-  perf_val_training <- performance(pred_val_training,"auc")
-  
-  training_error_rate = (1 - perf_val_training@y.values[[1]])*100;
+  training_error_rate = (1 - (mean(predicted_train.classes == training$HL_mpg)))*100;
   
   return (c(training_error_rate, test_error_rate));
 }
 
-compute_all_functions_classification<-function(ratio = 0.6, nbSeed = 123)
+compute_all_functions_classification<-function(ratio = 0.6, nbSeed = 122)
 {
   #--- partition
   set.seed(nbSeed);
@@ -193,6 +142,7 @@ compute_all_functions_classification<-function(ratio = 0.6, nbSeed = 123)
   
   unpruned_tree = build_perf_unprunned_tree_class(nbSeed, train, val);
   prunned_tree = build_perf_prunned_tree_class(nbSeed,train,val);
+  
   
   return(c(unpruned_tree[1],unpruned_tree[2],prunned_tree[1],prunned_tree[2]));
 }
@@ -274,7 +224,7 @@ build_perf_prunned_tree_reg <-function(nbSeed = 1, training, test)
   
   #tune length is the one controling the cp value if we choose a high tuneLength it will test several cp and choose the optimal one
   
-  model <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 30);
+  model <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 10);
   
   predictions_test <- model %>% predict(test);
   
