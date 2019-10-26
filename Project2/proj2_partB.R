@@ -254,7 +254,7 @@ build_perf_unprunned_tree_reg <-function(nbSeed = 1, training, test)
   
   #tune length is the one controling the cp value if we choose a high tuneLength it will test several cp and choose the optimal one
  
-  mtree <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 30);
+  model <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 0);
   
   predictions_test <- model %>% predict(test);
   
@@ -267,14 +267,14 @@ build_perf_unprunned_tree_reg <-function(nbSeed = 1, training, test)
   return (c(training_error_rate, test_error_rate));
 }
 
-build_perf_prunned_tree_reg <-function(nbSeed = 1, training, val)
+build_perf_prunned_tree_reg <-function(nbSeed = 1, training, test)
 {
   
   train = caret::train;
   
   #tune length is the one controling the cp value if we choose a high tuneLength it will test several cp and choose the optimal one
   
-  mtree <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 0);
+  model <- train( mpg ~., data = training, method = "rpart", trControl = trainControl("cv", number = 10), tuneLength = 30);
   
   predictions_test <- model %>% predict(test);
   
